@@ -53,7 +53,7 @@ resource "aws_ecs_cluster" "main" {
 }
 
 resource "aws_ecs_task_definition" "main" {
-  family                   = "${local.env}-taskdef"
+  family                   = "${local.env}-test-taskdef"
   cpu                      = 256
   memory                   = 512
   network_mode             = "awsvpc"
