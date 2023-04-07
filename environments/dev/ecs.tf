@@ -1,14 +1,14 @@
-resource "aws_security_group" "nginx" {
-  name_prefix = "nginx_sg_"
+resource "aws_security_group" "ecs" {
+  name_prefix = "ecs_sg_"
 
   vpc_id = aws_vpc.vpc.id
 
   ingress {
-    from_port = 80
-    to_port   = 80
-    protocol  = "tcp"
-    # cidr_blocks = ["10.0.0.0/16"]
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
+    self            = false
+    security_groups = ["${aws_security_group.nlb.id}"]
   }
 
   egress {
@@ -19,7 +19,7 @@ resource "aws_security_group" "nginx" {
   }
 
   tags = {
-    Name = "${local.project_name}-${local.env}-nginx_sg"
+    Name = "${local.project_name}-${local.env}-ecs-sg"
   }
 }
 
@@ -64,8 +64,8 @@ resource "aws_ecs_task_definition" "main" {
     name  = "${local.env}-ecs-container"
     image = "${aws_ecr_repository.main.repository_url}:latest"
     portMappings = [{
-      containerPort = 80
-      hostPort      = 80
+      containerPort = 3000
+      # hostPort      = 80
     }]
   }])
 }
@@ -81,7 +81,7 @@ resource "aws_ecs_service" "main" {
 
   network_configuration {
     assign_public_ip = false
-    security_groups  = [aws_security_group.nginx.id]
+    security_groups  = [aws_security_group.ecs.id]
 
     subnets = [
       "${aws_subnet.ecs_private_a.id}",
@@ -92,7 +92,7 @@ resource "aws_ecs_service" "main" {
   load_balancer {
     target_group_arn = aws_lb_target_group.example.arn
     container_name   = "${local.env}-ecs-container"
-    container_port   = 80
+    container_port   = 3000
   }
 
   lifecycle {

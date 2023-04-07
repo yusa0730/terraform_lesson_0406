@@ -54,45 +54,6 @@ resource "aws_subnet" "ecs_private_c" {
   }
 }
 
-## security group
-
-resource "aws_security_group" "vpc_endpoint" {
-  name_prefix = "vpc_endpoint_sg_"
-
-  vpc_id = aws_vpc.vpc.id
-
-  ingress {
-    from_port   = 0
-    to_port     = 65535
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port       = 0
-    to_port         = 65535
-    protocol        = "tcp"
-    security_groups = ["${aws_security_group.nlb.id}"]
-  }
-
-  tags = {
-    Name = "${local.project_name}-${local.env}-vpc_endpoint_sg"
-  }
-}
-
-# vpc endpoint
-resource "aws_vpc_endpoint" "endpoint_from_api_gateway_to_nlb" {
-  vpc_id              = aws_vpc.vpc.id
-  service_name        = "com.amazonaws.${local.region}.elasticloadbalancing"
-  security_group_ids  = ["${aws_security_group.vpc_endpoint.id}"]
-  private_dns_enabled = true
-  vpc_endpoint_type   = "Interface"
-  subnet_ids = [
-    "${aws_subnet.nlb_private_a.id}",
-    "${aws_subnet.nlb_private_c.id}"
-  ]
-}
-
 # CloudFront
 resource "aws_cloudfront_distribution" "distribution" {
   origin {
