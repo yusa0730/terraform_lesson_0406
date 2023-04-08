@@ -23,25 +23,50 @@ resource "aws_security_group" "ecs" {
   }
 }
 
-data "aws_iam_policy_document" "assume_role" {
-  statement {
-    actions = ["sts:AssumeRole"]
-
-    principals {
-      type        = "Service"
-      identifiers = ["ecs-tasks.amazonaws.com"]
-    }
-  }
-}
-
 resource "aws_iam_role" "ecs_task_execution_role" {
-  name               = "MyEcsTaskRole"
-  assume_role_policy = data.aws_iam_policy_document.assume_role.json
+  name = "ecs_task_execution_role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
 }
 
-resource "aws_iam_role_policy_attachment" "amazon_ecs_task_execution_role_policy" {
+resource "aws_iam_policy" "ecr_policy" {
+  name = "ecr_policy"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:GetRepositoryPolicy",
+          "ecr:DescribeRepositories",
+          "ecr:ListImages",
+          "ecr:DescribeImages",
+          "ecr:BatchGetImage",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_attachment" {
+  policy_arn = aws_iam_policy.ecr_policy.arn
   role       = aws_iam_role.ecs_task_execution_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
 resource "aws_ecr_repository" "main" {
@@ -59,14 +84,25 @@ resource "aws_ecs_task_definition" "main" {
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+  task_role_arn            = aws_iam_role.ecs_task_execution_role.arn
 
   container_definitions = jsonencode([{
-    name  = "${local.env}-ecs-container"
-    image = "${aws_ecr_repository.main.repository_url}:latest"
+    name   = "${local.env}-ecs-container"
+    image  = "${aws_ecr_repository.main.repository_url}:latest"
+    cpu    = 256
+    memory = 512
     portMappings = [{
       containerPort = 3000
-      # hostPort      = 80
+      hostPort      = 3000
     }]
+    log_configuration = {
+      log_driver = "awslogs"
+      options = {
+        "awslogs-region"        = "${local.region}"
+        "awslogs-group"         = "/ecs/${local.env}/app"
+        "awslogs-stream-prefix" = "app"
+      }
+    }
   }])
 }
 

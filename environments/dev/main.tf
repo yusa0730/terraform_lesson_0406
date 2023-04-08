@@ -99,5 +99,3 @@ resource "aws_cloudfront_distribution" "distribution" {
     max_ttl                = 0
   }
 }
-
-
