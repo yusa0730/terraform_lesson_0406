@@ -33,7 +33,7 @@ resource "aws_lb" "nlb" {
 }
 
 resource "aws_lb_target_group" "example" {
-  name                 = "example"
+  name                 = "tg2"
   target_type          = "ip"
   vpc_id               = aws_vpc.vpc.id
   port                 = 80
@@ -54,6 +54,10 @@ resource "aws_lb_target_group" "example" {
   depends_on = [
     aws_lb.nlb
   ]
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_lb_listener" "http" {

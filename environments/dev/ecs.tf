@@ -92,8 +92,8 @@ resource "aws_ecs_task_definition" "main" {
     cpu    = 256
     memory = 512
     portMappings = [{
-      containerPort = 3000
-      hostPort      = 3000
+      containerPort = 80
+      hostPort      = 80
     }]
     log_configuration = {
       log_driver = "awslogs"
@@ -128,7 +128,7 @@ resource "aws_ecs_service" "main" {
   load_balancer {
     target_group_arn = aws_lb_target_group.example.arn
     container_name   = "${local.env}-ecs-container"
-    container_port   = 3000
+    container_port   = 80
   }
 
   lifecycle {
